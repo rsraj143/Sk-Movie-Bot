@@ -1,6 +1,5 @@
 import telebot
 from telebot.types import Message
-from keep_alive import keep_alive
 import os
 from dotenv import load_dotenv
 import json
@@ -42,6 +41,5 @@ def send_movie(message: Message):
         bot.send_message(message.chat.id, "❌ ভিডিও পাঠানো যায়নি, পরে আবার চেষ্টা করুন।")
 
 # Keep bot alive
-keep_alive()
 print("✅ Bot is running...")
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
