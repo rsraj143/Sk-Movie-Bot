@@ -1,0 +1,18 @@
+{
+  "titanic": {
+    "chat_id": -1002796598199,
+    "msg_id": 9
+  },
+  "dorod": {
+    "chat_id": -1002796598199,
+    "msg_id": 3
+  },
+  "nolok": {
+    "chat_id": -1002796598199,
+    "msg_id": 11
+  },
+  "default": {
+    "chat_id": -1002796598199,
+    "msg_id": 9
+  }
+}
