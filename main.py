@@ -1,3 +1,4 @@
+from keep_alive import keep_alive  # 1. এই লাইনটি যোগ করুন
 import telebot
 from telebot.types import Message
 import os
@@ -36,10 +37,12 @@ def send_movie(message: Message):
         bot.copy_message(chat_id=message.chat.id,
                          from_chat_id=movie["chat_id"],
                          message_id=movie["msg_id"])
-        # প্রমোশনাল মেসেজটি এইখানে ছিল, এখন সরানো হয়েছে
     except Exception as e:
         bot.send_message(message.chat.id, "❌ ভিডিও পাঠানো যায়নি, পরে আবার চেষ্টা করুন।")
 
 # Keep bot alive
+keep_alive()  # 2. এই লাইনটি যোগ করুন
+
+# Keep bot running
 print("✅ Bot is running...")
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
