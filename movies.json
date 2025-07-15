@@ -22,5 +22,9 @@
   "default": {
     "chat_id": -1002728539571,
     "msg_id": 3
+  },
+  "arjun": {
+    "chat_id": -1002728539571,
+    "msg_id": 5
   }
 }
