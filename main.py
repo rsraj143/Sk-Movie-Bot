@@ -1,22 +1,25 @@
-from keep_alive import keep_alive
 import telebot
 from telebot.types import Message
 import os
 import json
 import datetime
+from flask import Flask, request
 
-# টোকেন লোড করা হচ্ছে
+# Telegram Bot Token (Render → Environment Variables এ TOKEN দিতে হবে)
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
+
+# Flask app তৈরি
+app = Flask(name)
 
 # movies.json ফাইল থেকে মুভির তালিকা লোড করা হচ্ছে
 with open("movies.json", "r") as f:
     MOVIES = json.load(f)
 
-# /start কমান্ডের জন্য ফাংশন
+# /start কমান্ড
 @bot.message_handler(commands=['start'])
 def send_movie(message: Message):
-    # কমান্ড থেকে মুভির কোড আলাদা করার নির্ভরযোগ্য নিয়ম
+    # movie code বের করা
     parts = message.text.split()
     if len(parts) > 1:
         movie_code = parts[1]
@@ -25,7 +28,7 @@ def send_movie(message: Message):
 
     bot.send_message(message.chat.id, "🎬 Welcome to Sk Movie Bot!\nPlease wait...")
 
-    # ব্যবহারকারীর তথ্য লগ করা হচ্ছে
+    # লগ ফাইলে ব্যবহারকারীর তথ্য লেখা
     user_id = message.chat.id
     username = message.chat.username
     first_name = message.chat.first_name
@@ -34,7 +37,7 @@ def send_movie(message: Message):
     with open("log.txt", "a") as f:
         f.write(log_text)
 
-    # JSON থেকে মুভি পাঠানো হচ্ছে
+    # JSON থেকে মুভি পাঠানো
     movie = MOVIES.get(movie_code, MOVIES["default"])
     try:
         bot.copy_message(chat_id=message.chat.id,
@@ -43,9 +46,20 @@ def send_movie(message: Message):
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ ভিডিও পাঠানো যায়নি। এরর: {e}")
 
-# keep_alive ফাংশনটি চালু করা হচ্ছে
-keep_alive()
+# Telegram → আমাদের সার্ভারে আপডেট পাঠাবে
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    bot.process_new_updates([update])
+    return "OK", 200
 
-# বট সবসময় চালু রাখার জন্য
-print("✅ Bot is running...")
-bot.infinity_polling(timeout=10, long_polling_timeout=5)
+# Root route → Webhook সেট করা
+@app.route("/", methods=["GET"])
+def index():
+    bot.remove_webhook()
+    bot.set_webhook(url=f"https://<your-app-name>.onrender.com/{TOKEN}")  # ⚠️ এখানে আপনার Render app name বসান
+    return "✅ Webhook set successfully!", 200
+
+# Render সার্ভার চালু
+if name == "main":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
