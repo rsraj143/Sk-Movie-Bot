@@ -1,40 +1,25 @@
-import os
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+import telegram
+import os
 
-# Flask app for webhook
 app = Flask(name)
 
-# Telegram Bot Token from Render Environment (your variable name = TOKEN)
-TOKEN = os.getenv("TOKEN")
+# Environment থেকে Bot Token আনুন
+TOKEN = os.environ.get("TOKEN")
+bot = telegram.Bot(token=TOKEN)
 
-# Telegram Bot Application
-application = Application.builder().token(TOKEN).build()
-
-
-# --- Command Handlers ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ Bot is running with webhook!")
-
-
-# Add handlers
-application.add_handler(CommandHandler("start", start))
-
-
-# --- Flask Routes ---
-@app.route(f"/{TOKEN}", methods=["POST"])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    application.update_queue.put_nowait(update)
-    return "ok", 200
-
-
-@app.route("/", methods=["GET"])
+# Root চেক করার জন্য
+@app.route("/")
 def home():
-    return "Bot is running on Render!", 200
+    return "✅ Bot is running!", 200
 
+# Webhook Route
+@app.route(f"/webhook/{TOKEN}", methods=["POST"])
+def webhook():
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
 
-# --- Run Locally (only for debugging, Render uses Gunicorn) ---
-if name == "main":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    # যদি /start কমান্ড দেয়
+    if update.message and update.message.text == "/start":
+        bot.send_message(chat_id=update.message.chat_id, text="🤖 Bot is Live and Working!")
+
+    return "ok", 200
