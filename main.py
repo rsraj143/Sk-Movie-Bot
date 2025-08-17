@@ -2,28 +2,22 @@ import os
 from flask import Flask, request
 import telegram
 
-# ✅ Environment থেকে টোকেন নেব
-TOKEN = os.environ.get("TOKEN")
-if not TOKEN:
-    raise ValueError("TOKEN not found in environment variables!")
-
+TOKEN = os.getenv("TOKEN")  # Render Environment থেকে নিন
 bot = telegram.Bot(token=TOKEN)
 
-# ✅ Flask App
 app = Flask(name)
 
-# Root চেক করার জন্য
-@app.route("/")
+@app.route('/')
 def home():
     return "Bot is running!"
 
-# ✅ Webhook URL
 @app.route(f"/webhook/{TOKEN}", methods=["POST"])
 def webhook():
     update = telegram.Update.de_json(request.get_json(force=True), bot)
-    bot.process_new_updates([update])
-    return "ok", 200
+    chat_id = update.message.chat.id
+    text = update.message.text
+    bot.send_message(chat_id=chat_id, text=f"আপনি লিখেছেন: {text}")
+    return "ok"
 
-# ✅ লোকালি টেস্ট করার জন্য (Render এ লাগবে না)
 if name == "main":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
