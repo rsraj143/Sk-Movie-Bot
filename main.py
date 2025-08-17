@@ -1,48 +1,40 @@
 import os
-import logging
 from flask import Flask, request
 from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-# লগ সেটআপ
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(name)
-
-# Render এ রাখা TOKEN environment থেকে পড়বে
-TOKEN = os.getenv("TOKEN")
-
-# Flask app
+# Flask app for webhook
 app = Flask(name)
 
-# Telegram bot application
+# Telegram Bot Token from Render Environment (your variable name = TOKEN)
+TOKEN = os.getenv("TOKEN")
+
+# Telegram Bot Application
 application = Application.builder().token(TOKEN).build()
 
 
-# Start command
-async def start(update: Update, context: CallbackContext):
+# --- Command Handlers ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot is running with webhook!")
 
 
-# Command হ্যান্ডলার যোগ করা
+# Add handlers
 application.add_handler(CommandHandler("start", start))
 
 
-# Flask route for webhook
+# --- Flask Routes ---
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     application.update_queue.put_nowait(update)
-    return "ok"
+    return "ok", 200
 
 
-# Render-এর হেলথ চেক রুট
-@app.route("/")
-def index():
-    return "Bot is running via webhook!"
+@app.route("/", methods=["GET"])
+def home():
+    return "Bot is running on Render!", 200
 
 
+# --- Run Locally (only for debugging, Render uses Gunicorn) ---
 if name == "main":
-    # লোকাল টেস্ট করার জন্য
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
