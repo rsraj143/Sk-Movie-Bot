@@ -1,25 +1,23 @@
 import telebot
 from telebot.types import Message
+from flask import Flask, request
 import os
 import json
 import datetime
-from flask import Flask, request
 
-# Telegram Bot Token (Render → Environment Variables এ TOKEN দিতে হবে)
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 # Flask app তৈরি
 app = Flask(name)
 
-# movies.json ফাইল থেকে মুভির তালিকা লোড করা হচ্ছে
+# movies.json থেকে মুভি লোড
 with open("movies.json", "r") as f:
     MOVIES = json.load(f)
 
-# /start কমান্ড
+# /start command
 @bot.message_handler(commands=['start'])
 def send_movie(message: Message):
-    # movie code বের করা
     parts = message.text.split()
     if len(parts) > 1:
         movie_code = parts[1]
@@ -28,7 +26,7 @@ def send_movie(message: Message):
 
     bot.send_message(message.chat.id, "🎬 Welcome to Sk Movie Bot!\nPlease wait...")
 
-    # লগ ফাইলে ব্যবহারকারীর তথ্য লেখা
+    # লগ রাখা
     user_id = message.chat.id
     username = message.chat.username
     first_name = message.chat.first_name
@@ -46,20 +44,25 @@ def send_movie(message: Message):
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ ভিডিও পাঠানো যায়নি। এরর: {e}")
 
-# Telegram → আমাদের সার্ভারে আপডেট পাঠাবে
+
+# Telegram webhook route
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    json_str = request.get_data(as_text=True)
+    update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
-    return "OK", 200
+    return "!", 200
 
-# Root route → Webhook সেট করা
+
+# Home route for UptimeRobot ping
 @app.route("/", methods=["GET"])
-def index():
-    bot.remove_webhook()
-    bot.set_webhook(url=f"https://<your-app-name>.onrender.com/{TOKEN}")  # ⚠️ এখানে আপনার Render app name বসান
-    return "✅ Webhook set successfully!", 200
+def home():
+    return "✅ Bot is alive!", 200
 
-# Render সার্ভার চালু
+
+# সার্ভার চালানো
 if name == "main":
+    url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{TOKEN}"
+    bot.remove_webhook()
+    bot.set_webhook(url=url)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
