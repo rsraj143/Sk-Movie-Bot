@@ -1,44 +1,51 @@
-from flask import Flask, request
+from keep_alive import keep_alive
+import telebot
+from telebot.types import Message
 import os
-import telegram
 import json
+import datetime
 
-TOKEN = os.getenv("TOKEN")  # Render এ Environment variable এ TOKEN রাখবেন
-bot = telegram.Bot(token=TOKEN)
+# টোকেন লোড করা হচ্ছে
+TOKEN = os.getenv("TOKEN")
+bot = telebot.TeleBot(TOKEN)
 
-app = Flask(name)
+# movies.json ফাইল থেকে মুভির তালিকা লোড করা হচ্ছে
+with open("movies.json", "r") as f:
+    MOVIES = json.load(f)
 
-# মুভি লোড ফাংশন
-def load_movies():
+# /start কমান্ডের জন্য ফাংশন
+@bot.message_handler(commands=['start'])
+def send_movie(message: Message):
+    # কমান্ড থেকে মুভির কোড আলাদা করার নির্ভরযোগ্য নিয়ম
+    parts = message.text.split()
+    if len(parts) > 1:
+        movie_code = parts[1]
+    else:
+        movie_code = "default"
+
+    bot.send_message(message.chat.id, "🎬 Welcome to Sk Movie Bot!\nPlease wait...")
+
+    # ব্যবহারকারীর তথ্য লগ করা হচ্ছে
+    user_id = message.chat.id
+    username = message.chat.username
+    first_name = message.chat.first_name
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_text = f"{now} - {first_name} (@{username}) - ID: {user_id} - Movie: {movie_code}\n"
+    with open("log.txt", "a") as f:
+        f.write(log_text)
+
+    # JSON থেকে মুভি পাঠানো হচ্ছে
+    movie = MOVIES.get(movie_code, MOVIES["default"])
     try:
-        with open("movie.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return []
+        bot.copy_message(chat_id=message.chat.id,
+                         from_chat_id=movie["chat_id"],
+                         message_id=movie["msg_id"])
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ ভিডিও পাঠানো যায়নি। এরর: {e}")
 
-@app.route("/")
-def home():
-    return "Bot is running!"
+# keep_alive ফাংশনটি চালু করা হচ্ছে
+keep_alive()
 
-@app.route(f"/webhook/{TOKEN}", methods=["POST"])
-def webhook():
-    update = telegram.Update.de_json(request.get_json(force=True), bot)
-
-    if update.message and update.message.text:
-        text = update.message.text.strip().lower()
-        chat_id = update.message.chat.id
-
-        movies = load_movies()
-        result = [m for m in movies if text in m["title"].lower()]
-
-        if result:
-            reply = "\n".join([f"🎬 {m['title']} - {m['link']}" for m in result])
-        else:
-            reply = "❌ কিছু পাওয়া যায়নি!"
-
-        bot.send_message(chat_id=chat_id, text=reply)
-
-    return "ok"
-
-if name == "main":
-    app.run(host="0.0.0.0", port=5000)
+# বট সবসময় চালু রাখার জন্য
+print("✅ Bot is running...")
+bot.infinity_polling(timeout=10, long_polling_timeout=5)
