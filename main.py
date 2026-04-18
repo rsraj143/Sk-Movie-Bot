@@ -25,10 +25,10 @@ def save_queue(data):
     with open(QUEUE_FILE, "w") as f:
         json.dump(data, f)
 
-# 🔥 ১ মিনিট delay
+# ⏳ ৩ ঘণ্টা delay (10800 sec)
 def add_to_queue(chat_id, message_id):
     queue = load_queue()
-    delete_time = time.time() + 60  # 60 sec = 1 minute
+    delete_time = time.time() + 10800  # 3 hours
     queue.append({
         "chat_id": chat_id,
         "message_id": message_id,
@@ -36,7 +36,7 @@ def add_to_queue(chat_id, message_id):
     })
     save_queue(queue)
 
-# 🔁 fast checker (test এর জন্য)
+# 🔁 background checker (optimized)
 def delete_worker():
     while True:
         queue = load_queue()
@@ -53,7 +53,7 @@ def delete_worker():
                 new_queue.append(item)
 
         save_queue(new_queue)
-        time.sleep(5)  # প্রতি ৫ সেকেন্ডে চেক করবে (test fast)
+        time.sleep(30)  # প্রতি ৩০ সেকেন্ডে চেক (balanced)
 
 threading.Thread(target=delete_worker, daemon=True).start()
 
@@ -67,6 +67,7 @@ def send_movie(message: Message):
 
     bot.send_message(message.chat.id, "🎬 Welcome to Sk Movie Bot!\nPlease wait...")
 
+    # log system
     user_id = message.chat.id
     username = message.chat.username
     first_name = message.chat.first_name
@@ -83,7 +84,7 @@ def send_movie(message: Message):
             message_id=movie["msg_id"]
         )
 
-        # ➕ queue তে save (1 min delete)
+        # ➕ queue তে save (3 hour delete)
         add_to_queue(message.chat.id, sent_msg.message_id)
 
     except Exception as e:
@@ -91,5 +92,5 @@ def send_movie(message: Message):
 
 keep_alive()
 
-print("🧪 Bot running in TEST mode (1 min delete)...")
+print("🚀 Bot running in PRO mode (3 hour auto delete)...")
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
