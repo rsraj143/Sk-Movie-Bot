@@ -25,10 +25,10 @@ def save_queue(data):
     with open(QUEUE_FILE, "w") as f:
         json.dump(data, f)
 
-# ⏳ ৩ ঘণ্টা delay (10800 sec)
+# ⏳ ২৪ ঘণ্টা delay (86400 sec)
 def add_to_queue(chat_id, message_id):
     queue = load_queue()
-    delete_time = time.time() + 10800  # 3 hours
+    delete_time = time.time() + 86400  # 24 hours
     queue.append({
         "chat_id": chat_id,
         "message_id": message_id,
@@ -53,7 +53,7 @@ def delete_worker():
                 new_queue.append(item)
 
         save_queue(new_queue)
-        time.sleep(30)  # প্রতি ৩০ সেকেন্ডে চেক (balanced)
+        time.sleep(30)
 
 threading.Thread(target=delete_worker, daemon=True).start()
 
@@ -84,7 +84,7 @@ def send_movie(message: Message):
             message_id=movie["msg_id"]
         )
 
-        # ➕ queue তে save (3 hour delete)
+        # ➕ queue তে save (24 hour delete)
         add_to_queue(message.chat.id, sent_msg.message_id)
 
     except Exception as e:
@@ -92,5 +92,5 @@ def send_movie(message: Message):
 
 keep_alive()
 
-print("🚀 Bot running in PRO mode (3 hour auto delete)...")
+print("🚀 Bot running in PRO mode (24 hour auto delete)...")
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
