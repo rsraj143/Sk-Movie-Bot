@@ -4,58 +4,12 @@ from telebot.types import Message
 import os
 import json
 import datetime
-import threading
-import time
 
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 with open("movies.json", "r") as f:
     MOVIES = json.load(f)
-
-QUEUE_FILE = "delete_queue.json"
-
-def load_queue():
-    if not os.path.exists(QUEUE_FILE):
-        return []
-    with open(QUEUE_FILE, "r") as f:
-        return json.load(f)
-
-def save_queue(data):
-    with open(QUEUE_FILE, "w") as f:
-        json.dump(data, f)
-
-# ⏳ ১২ ঘণ্টা delay (43200 sec)
-def add_to_queue(chat_id, message_id):
-    queue = load_queue()
-    delete_time = time.time() + 43200  # 12 hours
-    queue.append({
-        "chat_id": chat_id,
-        "message_id": message_id,
-        "delete_at": delete_time
-    })
-    save_queue(queue)
-
-# 🔁 background checker (optimized)
-def delete_worker():
-    while True:
-        queue = load_queue()
-        new_queue = []
-        now = time.time()
-
-        for item in queue:
-            if now >= item["delete_at"]:
-                try:
-                    bot.delete_message(item["chat_id"], item["message_id"])
-                except Exception as e:
-                    print("Delete error:", e)
-            else:
-                new_queue.append(item)
-
-        save_queue(new_queue)
-        time.sleep(30)
-
-threading.Thread(target=delete_worker, daemon=True).start()
 
 @bot.message_handler(commands=['start'])
 def send_movie(message: Message):
@@ -67,30 +21,32 @@ def send_movie(message: Message):
 
     bot.send_message(message.chat.id, "🎬 Welcome to Sk Movie Bot!\nPlease wait...")
 
-    # log system
+    # Log system
     user_id = message.chat.id
     username = message.chat.username
     first_name = message.chat.first_name
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     log_text = f"{now} - {first_name} (@{username}) - ID: {user_id} - Movie: {movie_code}\n"
-    with open("log.txt", "a") as f:
+
+    with open("log.txt", "a", encoding="utf-8") as f:
         f.write(log_text)
 
     movie = MOVIES.get(movie_code, MOVIES["default"])
+
     try:
-        sent_msg = bot.copy_message(
+        bot.copy_message(
             chat_id=message.chat.id,
             from_chat_id=movie["chat_id"],
             message_id=movie["msg_id"]
         )
-
-        # ➕ queue তে save (12 hour delete)
-        add_to_queue(message.chat.id, sent_msg.message_id)
-
     except Exception as e:
-        bot.send_message(message.chat.id, f"❌ ভিডিও পাঠানো যায়নি। এরর: {e}")
+        bot.send_message(
+            message.chat.id,
+            f"❌ ভিডিও পাঠানো যায়নি। এরর: {e}"
+        )
 
 keep_alive()
 
-print("🚀 Bot running in PRO mode (12 hour auto delete)...")
+print("🚀 Bot running...")
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
